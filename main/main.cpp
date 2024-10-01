@@ -85,7 +85,8 @@ extern "C" void app_main(void) {
   hid_device->pnp(0x02, 0x045E, 0x02FD, 0x0110); // 0x02: USB, 0x045E: Microsoft, 0x02FD: Xbox One
 
   // set the report map
-#if 1
+#define EXHIBIT_BUG 1
+#if !EXHIBIT_BUG
   hid_device->reportMap((uint8_t *)descriptor.data(), descriptor.size());
 #else
   // BUG: if you try to set the report map using std::vector<uint8_t>, it fails!
@@ -123,7 +124,7 @@ extern "C" void app_main(void) {
   adv->setScanResponse(false);
   adv->addTxPower();
   adv->setAdvertisementType(BLE_GAP_CONN_MODE_UND);
-  auto started = adv->start(30'000, nullptr);
+  auto started = adv->start(0, nullptr); // 0 = advertise forever
   if (started) {
     printf("Advertising started\n");
   } else {
@@ -147,9 +148,10 @@ extern "C" void app_main(void) {
     if (is_connected && !was_connected) {
       was_connected = true;
       printf("[%0.3f] Connected\n", elapsed());
-    } else if (!is_connected) {
+    } else if (!is_connected && was_connected) {
       was_connected = false;
       printf("[%0.3f] Disconnected\n", elapsed());
+      printf("[%0.3f] waiting for connection...\n", elapsed());
     }
 
     if (!is_connected) {
@@ -184,7 +186,11 @@ extern "C" void app_main(void) {
 
     // send an input report
     auto report = gamepad_input_report.get_report();
+#if !EXHIBIT_BUG
+    input_report->notify((uint8_t *)report.data(), report.size());
+#else
     input_report->notify(report);
+#endif
 
     // sleep
     std::this_thread::sleep_until(start + 1s);
