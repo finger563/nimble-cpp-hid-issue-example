@@ -85,7 +85,7 @@ extern "C" void app_main(void) {
   hid_device->pnp(0x02, 0x045E, 0x02FD, 0x0110); // 0x02: USB, 0x045E: Microsoft, 0x02FD: Xbox One
 
   // set the report map
-#define EXHIBIT_BUG 1
+#define EXHIBIT_BUG 0
 #if !EXHIBIT_BUG
   hid_device->reportMap((uint8_t *)descriptor.data(), descriptor.size());
 #else
