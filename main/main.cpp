@@ -85,7 +85,15 @@ extern "C" void app_main(void) {
   hid_device->pnp(0x02, 0x045E, 0x02FD, 0x0110); // 0x02: USB, 0x045E: Microsoft, 0x02FD: Xbox One
 
   // set the report map
+#if 1
   hid_device->reportMap((uint8_t *)descriptor.data(), descriptor.size());
+#else
+  // BUG: if you try to set the report map using std::vector<uint8_t>, it fails!
+  //
+  // NOTE: to use this API, you have to locally modify the NimBLEHIDDevice to
+  //       allow directly accessing the report map characteristic
+  hid_device->reportMap()->setValue(descriptor);
+#endif
 
   // use the HID service to make an input report characteristic
   auto input_report = hid_device->inputReport(input_report_id);
@@ -146,7 +154,7 @@ extern "C" void app_main(void) {
 
     if (!is_connected) {
       // go up a line and clear it
-      printf("\033[1A\033[K");
+      printf("\033[A\033[K");
       printf("[%0.3f] waiting for connection...\n", elapsed());
       // sleep
       std::this_thread::sleep_until(start + 100ms);
@@ -159,8 +167,7 @@ extern "C" void app_main(void) {
 
     // cycle through the possible d-pad states
     GamepadInput::Hat hat = (GamepadInput::Hat)button_index;
-    // use the button index to set the position of the right joystick
-    float angle = 2.0f * M_PI * button_index / num_buttons;
+    static float angle = 0;
 
     gamepad_input_report.reset();
     gamepad_input_report.set_hat(hat);
@@ -173,6 +180,7 @@ extern "C" void app_main(void) {
     gamepad_input_report.set_brake(std::abs(cos(angle)));
 
     button_index = (button_index % num_buttons) + 1;
+    angle += M_PI / 16;
 
     // send an input report
     auto report = gamepad_input_report.get_report();
